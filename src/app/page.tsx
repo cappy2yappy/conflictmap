@@ -1,101 +1,99 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import dynamic from "next/dynamic";
+import SidePanel from "@/components/SidePanel";
+import { ConflictEvent } from "@/lib/types";
+import { sampleConflicts } from "@/lib/sample-data";
+
+const ConflictMap = dynamic(() => import("@/components/ConflictMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full bg-gray-900 flex items-center justify-center">
+      <div className="text-gray-400 text-sm">Loading map...</div>
+    </div>
+  ),
+});
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [selectedConflict, setSelectedConflict] =
+    useState<ConflictEvent | null>(null);
+  const [panelOpen, setPanelOpen] = useState(true);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  const handleSelectConflict = (conflict: ConflictEvent) => {
+    setSelectedConflict(conflict);
+    setPanelOpen(true);
+  };
+
+  const handleClose = () => {
+    setSelectedConflict(null);
+  };
+
+  return (
+    <div className="flex h-screen w-screen overflow-hidden">
+      {/* Side Panel */}
+      <div
+        className={`${
+          panelOpen ? "w-80" : "w-0"
+        } transition-all duration-300 shrink-0 overflow-hidden`}
+      >
+        <SidePanel
+          conflicts={sampleConflicts}
+          selectedConflict={selectedConflict}
+          onSelectConflict={handleSelectConflict}
+          onClose={handleClose}
+        />
+      </div>
+
+      {/* Map */}
+      <div className="flex-1 relative">
+        <ConflictMap
+          conflicts={sampleConflicts}
+          selectedConflict={selectedConflict}
+          onSelectConflict={handleSelectConflict}
+        />
+
+        {/* Toggle panel button */}
+        <button
+          onClick={() => setPanelOpen(!panelOpen)}
+          className="absolute top-4 left-4 z-[1000] bg-gray-900/90 hover:bg-gray-800 text-white p-2 rounded-lg border border-gray-700 backdrop-blur-sm"
+          title={panelOpen ? "Hide panel" : "Show panel"}
+        >
+          <svg
+            className={`w-5 h-5 transition-transform ${panelOpen ? "" : "rotate-180"}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M11 19l-7-7 7-7m8 14l-7-7 7-7"
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          </svg>
+        </button>
+
+        {/* Legend */}
+        <div className="absolute bottom-6 right-4 z-[1000] bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg p-3">
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+            Severity
+          </h3>
+          <div className="space-y-1.5">
+            {[
+              { color: "bg-red-700", label: "Critical" },
+              { color: "bg-red-500", label: "High" },
+              { color: "bg-orange-500", label: "Medium" },
+              { color: "bg-yellow-500", label: "Low" },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-2">
+                <span className={`${item.color} w-2.5 h-2.5 rounded-full`} />
+                <span className="text-xs text-gray-300">{item.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
     </div>
   );
 }
