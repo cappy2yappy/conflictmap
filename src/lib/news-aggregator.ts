@@ -134,13 +134,13 @@ export async function fetchNewsWithFallback(
   
   let articles: NewsArticle[] = [];
   
-  // Try GDELT first
-  articles = await fetchGDELT(location, keywords);
+  // Use Google News as primary (GDELT is rate-limited)
+  articles = await fetchGoogleNews(location, keywords);
   
-  // Fallback to Google News if GDELT fails or returns nothing
+  // Fallback to GDELT if Google News fails
   if (articles.length === 0) {
-    console.log(`[News] GDELT failed, trying Google News for ${location}`);
-    articles = await fetchGoogleNews(location, keywords);
+    console.log(`[News] Google News failed, trying GDELT for ${location}`);
+    articles = await fetchGDELT(location, keywords);
   }
   
   // Cache the results
