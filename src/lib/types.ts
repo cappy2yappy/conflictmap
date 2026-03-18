@@ -28,3 +28,11 @@ export interface ConflictEvent {
   parentId?: string; // Link to parent conflict (for sub-events)
   subEventCount?: number; // Number of child events
 }
+
+export interface NewsArticle {
+  title: string;
+  url: string;
+  source: string;
+  publishedAt: string;
+  description?: string;
+}

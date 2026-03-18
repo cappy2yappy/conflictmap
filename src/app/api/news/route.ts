@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { fetchConflictNews } from "@/lib/gdelt-news";
+import { fetchNewsWithFallback } from "@/lib/news-aggregator";
+import { Severity } from "@/lib/types";
 
 /**
- * GET /api/news?location=Ukraine&keywords=conflict,war
+ * GET /api/news?location=Ukraine&keywords=conflict,war&severity=high
  * 
- * Fetches news articles for a specific conflict location
+ * Fetches news articles for a specific conflict location with severity-based filtering
  */
 export async function GET(request: NextRequest) {
   try {
@@ -12,6 +13,7 @@ export async function GET(request: NextRequest) {
     
     const location = searchParams.get("location");
     const keywordsParam = searchParams.get("keywords");
+    const severity = (searchParams.get("severity") || "medium") as Severity;
     
     if (!location) {
       return NextResponse.json(
@@ -23,12 +25,13 @@ export async function GET(request: NextRequest) {
     // Parse keywords (comma-separated)
     const keywords = keywordsParam 
       ? keywordsParam.split(",").map(k => k.trim())
-      : ["conflict", "war", "attack", "violence"];
+      : ["conflict", "war", "attack", "violence", "protest", "strike"];
 
-    const articles = await fetchConflictNews(location, keywords);
+    const articles = await fetchNewsWithFallback(location, keywords, severity);
 
     return NextResponse.json({
       location,
+      severity,
       count: articles.length,
       articles,
     });

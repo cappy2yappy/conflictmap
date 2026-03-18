@@ -52,7 +52,17 @@ function ConflictDetail({
     setLoadingNews(true);
     setShowAllNews(false);
     
-    fetch(`/api/news?location=${encodeURIComponent(conflict.country)}`)
+    // Build query with severity for article count filtering
+    const query = new URLSearchParams({
+      location: conflict.country,
+      severity: conflict.severity,
+      keywords: conflict.type === "protest" ? "protest,demonstration,rally" :
+                conflict.type === "labor_strike" ? "strike,labor,union" :
+                conflict.type === "civil_unrest" ? "unrest,riot,violence" :
+                "conflict,war,attack,violence"
+    });
+    
+    fetch(`/api/news?${query}`)
       .then(res => res.json())
       .then(data => {
         setNews(data.articles || []);
@@ -62,7 +72,7 @@ function ConflictDetail({
         console.error("Failed to fetch news:", err);
         setLoadingNews(false);
       });
-  }, [conflict.country]);
+  }, [conflict.country, conflict.severity, conflict.type]);
 
   const displayedNews = showAllNews ? news : news.slice(0, 5);
 
