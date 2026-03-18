@@ -1,9 +1,11 @@
 export type ConflictType =
   | "armed_conflict"
   | "protest"
+  | "civil_unrest"
   | "terrorism"
   | "political_violence"
-  | "territorial_dispute";
+  | "territorial_dispute"
+  | "labor_strike";
 
 export type Severity = "low" | "medium" | "high" | "critical";
 

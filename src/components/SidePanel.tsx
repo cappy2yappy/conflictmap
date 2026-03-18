@@ -21,9 +21,11 @@ const severityConfig: Record<Severity, { label: string; color: string }> = {
 const typeLabels: Record<ConflictType, string> = {
   armed_conflict: "Armed Conflict",
   protest: "Protest",
+  civil_unrest: "Civil Unrest",
   terrorism: "Terrorism",
   political_violence: "Political Violence",
   territorial_dispute: "Territorial Dispute",
+  labor_strike: "Labor Strike",
 };
 
 interface SidePanelProps {
