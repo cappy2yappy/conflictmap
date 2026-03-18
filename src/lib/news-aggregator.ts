@@ -32,9 +32,17 @@ async function fetchGoogleNews(
     
     console.log(`[Google News] Fetching: ${rssUrl}`);
     
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    
     const response = await fetch(rssUrl, {
-      signal: AbortSignal.timeout(10000) // 10 second timeout
+      signal: controller.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; ConflictMapBot/1.0)',
+      },
     });
+    
+    clearTimeout(timeout);
     
     if (!response.ok) {
       console.error(`[Google News] HTTP error: ${response.status}`);
