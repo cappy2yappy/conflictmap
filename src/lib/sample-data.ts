@@ -1,6 +1,7 @@
 import { ConflictEvent } from "./types";
 
-export const sampleConflicts: ConflictEvent[] = [
+// Strategic-level conflicts (zoom 1-4)
+export const strategicConflicts: ConflictEvent[] = [
   {
     id: "1",
     title: "Eastern Ukraine Frontline Clashes",
@@ -15,6 +16,8 @@ export const sampleConflicts: ConflictEvent[] = [
     source: "ACLED",
     country: "Ukraine",
     region: "Eastern Europe",
+    zoomLevel: "strategic",
+    subEventCount: 5,
   },
   {
     id: "2",
@@ -30,6 +33,8 @@ export const sampleConflicts: ConflictEvent[] = [
     source: "ACLED",
     country: "Sudan",
     region: "East Africa",
+    zoomLevel: "strategic",
+    subEventCount: 3,
   },
   {
     id: "3",
@@ -45,6 +50,7 @@ export const sampleConflicts: ConflictEvent[] = [
     source: "ACLED",
     country: "Myanmar",
     region: "Southeast Asia",
+    zoomLevel: "strategic",
   },
   {
     id: "4",
@@ -60,6 +66,8 @@ export const sampleConflicts: ConflictEvent[] = [
     source: "GDELT",
     country: "Palestine",
     region: "Middle East",
+    zoomLevel: "strategic",
+    subEventCount: 4,
   },
   {
     id: "5",
@@ -75,6 +83,7 @@ export const sampleConflicts: ConflictEvent[] = [
     source: "ACLED",
     country: "Mali",
     region: "West Africa",
+    zoomLevel: "strategic",
   },
   {
     id: "6",
@@ -90,6 +99,7 @@ export const sampleConflicts: ConflictEvent[] = [
     source: "ACLED",
     country: "DR Congo",
     region: "Central Africa",
+    zoomLevel: "strategic",
   },
   {
     id: "7",
@@ -105,6 +115,7 @@ export const sampleConflicts: ConflictEvent[] = [
     source: "ACLED",
     country: "Ethiopia",
     region: "East Africa",
+    zoomLevel: "strategic",
   },
   {
     id: "8",
@@ -120,6 +131,7 @@ export const sampleConflicts: ConflictEvent[] = [
     source: "GDELT",
     country: "Colombia",
     region: "South America",
+    zoomLevel: "strategic",
   },
   {
     id: "9",
@@ -135,6 +147,7 @@ export const sampleConflicts: ConflictEvent[] = [
     source: "ACLED",
     country: "Somalia",
     region: "East Africa",
+    zoomLevel: "strategic",
   },
   {
     id: "10",
@@ -150,5 +163,238 @@ export const sampleConflicts: ConflictEvent[] = [
     source: "GDELT",
     country: "Haiti",
     region: "Caribbean",
+    zoomLevel: "strategic",
   },
 ];
+
+// Regional-level events (zoom 5-8) - Sub-events of strategic conflicts
+export const regionalConflicts: ConflictEvent[] = [
+  // Ukraine sub-events
+  {
+    id: "1-1",
+    title: "Bakhmut Area Fighting",
+    description: "Heavy artillery duels and infantry clashes near Bakhmut. Ukrainian forces report Russian assault attempts.",
+    lat: 48.5976,
+    lng: 37.9991,
+    date: "2026-03-15",
+    type: "armed_conflict",
+    severity: "critical",
+    casualties: 18,
+    source: "ACLED",
+    country: "Ukraine",
+    region: "Donetsk Oblast",
+    zoomLevel: "regional",
+    parentId: "1",
+  },
+  {
+    id: "1-2",
+    title: "Avdiivka Shelling",
+    description: "Residential areas hit by artillery fire. Several civilians injured.",
+    lat: 48.1399,
+    lng: 37.7473,
+    date: "2026-03-14",
+    type: "armed_conflict",
+    severity: "high",
+    casualties: 8,
+    source: "GDELT",
+    country: "Ukraine",
+    region: "Donetsk Oblast",
+    zoomLevel: "regional",
+    parentId: "1",
+  },
+  {
+    id: "1-3",
+    title: "Kherson River Crossing Attack",
+    description: "Russian forces targeted Ukrainian positions near the Dnipro River.",
+    lat: 46.6354,
+    lng: 32.6169,
+    date: "2026-03-13",
+    type: "armed_conflict",
+    severity: "medium",
+    casualties: 5,
+    source: "ACLED",
+    country: "Ukraine",
+    region: "Kherson Oblast",
+    zoomLevel: "regional",
+    parentId: "1",
+  },
+  {
+    id: "1-4",
+    title: "Zaporizhzhia Front Skirmishes",
+    description: "Small-scale engagements along the southern front line.",
+    lat: 47.8388,
+    lng: 35.1396,
+    date: "2026-03-12",
+    type: "armed_conflict",
+    severity: "medium",
+    casualties: 7,
+    source: "GDELT",
+    country: "Ukraine",
+    region: "Zaporizhzhia Oblast",
+    zoomLevel: "regional",
+    parentId: "1",
+  },
+  {
+    id: "1-5",
+    title: "Kyiv Drone Strike",
+    description: "Air defense shot down multiple drones targeting the capital. Some debris caused minor damage.",
+    lat: 50.4501,
+    lng: 30.5234,
+    date: "2026-03-15",
+    type: "armed_conflict",
+    severity: "medium",
+    casualties: 2,
+    source: "GDELT",
+    country: "Ukraine",
+    region: "Kyiv Oblast",
+    zoomLevel: "regional",
+    parentId: "1",
+  },
+
+  // Sudan sub-events
+  {
+    id: "2-1",
+    title: "Omdurman Bridge Battle",
+    description: "RSF and SAF clash for control of key bridge connecting Khartoum and Omdurman.",
+    lat: 15.6446,
+    lng: 32.4777,
+    date: "2026-03-14",
+    type: "armed_conflict",
+    severity: "critical",
+    casualties: 34,
+    source: "ACLED",
+    country: "Sudan",
+    region: "Khartoum State",
+    zoomLevel: "regional",
+    parentId: "2",
+  },
+  {
+    id: "2-2",
+    title: "Khartoum North Hospital Siege",
+    description: "Fighting near major hospital complex. Medical staff evacuated.",
+    lat: 15.5931,
+    lng: 32.5348,
+    date: "2026-03-13",
+    type: "armed_conflict",
+    severity: "high",
+    casualties: 21,
+    source: "GDELT",
+    country: "Sudan",
+    region: "Khartoum State",
+    zoomLevel: "regional",
+    parentId: "2",
+  },
+  {
+    id: "2-3",
+    title: "Bahri District Clashes",
+    description: "Residential areas caught in crossfire between SAF and RSF forces.",
+    lat: 15.6282,
+    lng: 32.6595,
+    date: "2026-03-14",
+    type: "armed_conflict",
+    severity: "high",
+    casualties: 28,
+    source: "ACLED",
+    country: "Sudan",
+    region: "Khartoum State",
+    zoomLevel: "regional",
+    parentId: "2",
+  },
+
+  // Gaza sub-events
+  {
+    id: "4-1",
+    title: "Gaza City Northern District",
+    description: "Intense operations in northern neighborhoods. Civilian evacuations ongoing.",
+    lat: 31.5204,
+    lng: 34.4668,
+    date: "2026-03-15",
+    type: "armed_conflict",
+    severity: "critical",
+    casualties: 62,
+    source: "GDELT",
+    country: "Palestine",
+    region: "Gaza Strip",
+    zoomLevel: "regional",
+    parentId: "4",
+  },
+  {
+    id: "4-2",
+    title: "Khan Younis Operations",
+    description: "Ground operations continue in southern Gaza. Aid convoys blocked.",
+    lat: 31.3460,
+    lng: 34.3027,
+    date: "2026-03-14",
+    type: "armed_conflict",
+    severity: "high",
+    casualties: 43,
+    source: "GDELT",
+    country: "Palestine",
+    region: "Gaza Strip",
+    zoomLevel: "regional",
+    parentId: "4",
+  },
+  {
+    id: "4-3",
+    title: "Rafah Crossing Closure",
+    description: "Main humanitarian corridor remains closed. Critical supplies shortage.",
+    lat: 31.2857,
+    lng: 34.2426,
+    date: "2026-03-13",
+    type: "armed_conflict",
+    severity: "high",
+    casualties: 15,
+    source: "ACLED",
+    country: "Palestine",
+    region: "Gaza Strip",
+    zoomLevel: "regional",
+    parentId: "4",
+  },
+  {
+    id: "4-4",
+    title: "Deir al-Balah Refugee Camp",
+    description: "Strikes near refugee camp. Multiple families displaced.",
+    lat: 31.4176,
+    lng: 34.3515,
+    date: "2026-03-15",
+    type: "armed_conflict",
+    severity: "high",
+    casualties: 36,
+    source: "GDELT",
+    country: "Palestine",
+    region: "Gaza Strip",
+    zoomLevel: "regional",
+    parentId: "4",
+  },
+];
+
+// Combine all conflicts for export
+export const sampleConflicts: ConflictEvent[] = [
+  ...strategicConflicts,
+  ...regionalConflicts,
+];
+
+/**
+ * Filter conflicts by zoom level
+ * @param zoom Current map zoom level (1-18)
+ * @returns Conflicts appropriate for that zoom level
+ */
+export function getConflictsForZoom(zoom: number): ConflictEvent[] {
+  if (zoom <= 4) {
+    // Strategic view - show only top-level conflicts
+    return strategicConflicts;
+  } else if (zoom <= 8) {
+    // Regional view - show strategic + regional
+    return sampleConflicts;
+  } else {
+    // Local view - show all (in real implementation, would fetch from GDELT GEO API)
+    return sampleConflicts;
+  }
+}
+
+/**
+ * Get sub-events for a specific conflict
+ */
+export function getSubEvents(parentId: string): ConflictEvent[] {
+  return regionalConflicts.filter(c => c.parentId === parentId);
+}

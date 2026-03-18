@@ -7,6 +7,8 @@ export type ConflictType =
 
 export type Severity = "low" | "medium" | "high" | "critical";
 
+export type ZoomLevel = "strategic" | "regional" | "local";
+
 export interface ConflictEvent {
   id: string;
   title: string;
@@ -20,4 +22,7 @@ export interface ConflictEvent {
   source: string;
   country: string;
   region: string;
+  zoomLevel: ZoomLevel;
+  parentId?: string; // Link to parent conflict (for sub-events)
+  subEventCount?: number; // Number of child events
 }

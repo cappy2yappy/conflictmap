@@ -1,11 +1,13 @@
-# ConflictMap - Next Steps
+# ConflictMap - Night Build Priorities (THURSDAY LAUNCH)
 
-## Night 1 Priority: News Article Integration 🔥
+## Night 1 (Tonight - March 17, 2 AM) - NEWS INTEGRATION 🔥
 
-### 1. GDELT DOC API for News Sources (TOP PRIORITY)
+**Goal:** Add news articles to each conflict
+
+### 1. GDELT DOC API Integration (TOP PRIORITY)
 ```
 GET https://api.gdeltproject.org/api/v2/doc/doc
-  ?query=(conflict location_name)
+  ?query=ukraine conflict
   ?mode=artlist
   ?format=json
   ?timespan=7d
@@ -13,62 +15,196 @@ GET https://api.gdeltproject.org/api/v2/doc/doc
   ?sourcelang=eng
 ```
 
-**Implementation Plan:**
-- Build: `src/lib/gdelt-news.ts` fetcher
-- API route: `src/app/api/news/route.ts?location=ukraine&keywords=conflict`
-- Add to side panel: "Recent News" section with expandable article list
-- Each article: headline, source (Reuters, BBC, AP), time ago, external link
-- Click article → opens in new tab
-- Show article count badge on marker: "12 articles"
-- Filter: Last 24h / 7d / 30d toggle
+**Build:**
+- `src/lib/gdelt-news.ts` - Fetch news articles by location/keywords
+- `src/app/api/news/route.ts` - API endpoint: GET /api/news?location=ukraine&keywords=conflict
+- Update `src/components/SidePanel.tsx` - Add "Recent News" section below event details
+- Article card component:
+  ```typescript
+  interface NewsArticle {
+    title: string;
+    source: string; // "Reuters", "BBC", "AP"
+    url: string;
+    publishedAt: string;
+    imageUrl?: string;
+  }
+  ```
 
-**UI Changes:**
-- Expand side panel to show news section below event details
-- Article cards: clean design, source logo if available
+**UI Requirements:**
+- Expandable section: "📰 Recent News (12 articles)"
+- Show first 5, click "View all" to expand
+- Each article: headline, source logo/name, "2h ago" timestamp
+- Click article → opens in new tab
 - Loading skeleton while fetching
 - Empty state: "No recent news for this location"
 
-### 2. Live GDELT GEO API Integration (AFTER NEWS)
+**Test with:**
+- Ukraine conflict
+- Gaza conflict
+- Sudan conflict
+
+**Deliverable:** Click any conflict → see 5-10 recent news articles with sources
+
+---
+
+## Night 2 (Wednesday - March 18, 2 AM) - TWITTER INTEGRATION
+
+**Goal:** Add real-time Twitter feeds from verified accounts
+
+### Curated Account List (20 verified accounts)
+```javascript
+const CONFLICT_MONITORS = [
+  { handle: 'Conflicts', name: 'Conflict News' },
+  { handle: 'IntelDoge', name: 'Intel Doge' },
+  { handle: 'OSINTdefender', name: 'OSINT Defender' },
+  { handle: 'WarMonitors', name: 'War Monitors' },
+  { handle: 'sentdefender', name: 'Sentinel' },
+  { handle: 'RALee85', name: 'Rob Lee (Russia/Ukraine)' },
+  { handle: 'Osinttechnical', name: 'OSINT Technical' },
+  { handle: 'michaelh992', name: 'Michael Horowitz (Middle East)' },
+  { handle: 'Nrg8000', name: 'Myanmar Witness' },
+  { handle: 'HN_Schlottman', name: 'Helena (Sudan)' }
+  // ... 10 more
+];
 ```
-GET https://api.gdeltproject.org/api/v2/geo/geo
-  ?query=(conflict OR war OR attack OR bombing)
-  ?mode=PointData
-  ?format=GeoJSON
-  ?timespan=7d
-  ?maxpoints=500
+
+### Build:
+1. **Twitter API v2 (free tier):**
+   ```
+   GET /2/tweets/search/recent
+     ?query=from:Conflicts Ukraine
+     ?max_results=10
+   ```
+   - 500K tweets/month free tier
+   - Store API key in env: `TWITTER_BEARER_TOKEN`
+
+2. **Fallback: Nitter RSS (no API needed):**
+   ```
+   https://nitter.net/Conflicts/rss
+   ```
+
+3. **Component:**
+   - `src/components/TwitterFeed.tsx`
+   - Props: `keywords: string[], accounts: string[]`
+   - Filters tweets matching conflict location/keywords
+   - Shows 5 most recent
+
+**UI Requirements:**
+- Section: "🐦 Social Media (8)"
+- Tweet cards:
+  - Author avatar + @handle (verified badge if applicable)
+  - Tweet text (truncate at 280 chars)
+  - "2h ago" timestamp
+  - Embedded images/videos (if available)
+  - Click → opens tweet on Twitter/X
+
+**Deliverable:** Click Ukraine → see 5 recent tweets from @Conflicts, @RALee85, etc.
+
+---
+
+## Wednesday Daytime (Manual) - ZOOM-LEVEL FILTERING
+
+**Goal:** Show different detail levels based on map zoom
+
+### Zoom Levels:
+```javascript
+const ZOOM_LEVELS = {
+  WORLD: { min: 1, max: 4 },    // Strategic view
+  COUNTRY: { min: 5, max: 8 },  // Regional view  
+  CITY: { min: 9, max: 18 }     // Local view
+};
 ```
-- Returns GeoJSON ready for Leaflet
-- No API key needed
-- 7-day rolling window, 15-min updates
-- Build: `src/lib/gdelt.ts` fetcher + `src/app/api/conflicts/route.ts`
 
-### 3. ACLED API Registration & Integration
-- Register at https://acleddata.com/user/register
-- Implement OAuth token flow in `src/lib/acled.ts`
-- Normalize ACLED events to match ConflictEvent interface
-- Merge with GDELT data, deduplicate by location proximity
+### Data Structure:
+```typescript
+interface ConflictEvent {
+  // ... existing fields
+  zoomLevel: 'strategic' | 'regional' | 'local';
+  parentId?: string; // Link to parent conflict
+}
+```
 
-### 4. Data Normalization Layer
-- Create `src/lib/normalize.ts`
-- Map both ACLED and GDELT fields to unified `ConflictEvent` type
-- Severity mapping: GDELT GoldsteinScale → low/medium/high/critical
-- Type mapping: CAMEO codes → armed_conflict/protest/terrorism/etc.
+### Example:
+```
+Strategic (zoom 1-4):
+  - Ukraine Conflict (1 marker)
 
-## Night 2: UI Enhancements
-- Marker clustering (leaflet.markercluster)
-- Filter bar: conflict type checkboxes, severity dropdown, date range
-- Loading skeleton for map and panel
-- Error boundary with retry
+Regional (zoom 5-8):
+  - Bakhmut Fighting (marker at 48.59, 37.98)
+  - Kherson Shelling (marker at 46.63, 32.61)
+  - Kyiv Drone Attack (marker at 50.45, 30.52)
 
-## Night 3: Database & Persistence
-- Supabase project setup (free tier: 500 MB, 2 projects)
-- Schema: conflicts table, sources table, daily_snapshots
-- Cron job to fetch and store data (Vercel Cron or GitHub Actions)
-- Switch API route from live-fetch to database queries
+Local (zoom 9+):
+  - Individual incidents with exact street addresses
+  - Tweet locations
+  - News article geotagged locations
+```
 
-## Technical Decisions Made
-- **react-leaflet v4** (not v5) - React 18 compatible
-- **CARTO dark tiles** - free, no API key, dark theme
-- **Dynamic import** for map component - avoids SSR issues with Leaflet
-- **DivIcon markers** - custom styled, no image dependencies
-- **Client components** for interactive parts, server components where possible
+### Implementation:
+1. Filter markers based on current zoom level
+2. Auto-cluster markers when zoomed out
+3. Show "12 more incidents" badge on clusters
+4. Click cluster → zoom in + expand
+
+**Deliverable:** Zoom in on Ukraine → see 10-15 regional incidents instead of just 1
+
+---
+
+## Thursday Morning - FINAL POLISH
+
+### Build & Test
+- [ ] Run production build: `npm run build`
+- [ ] Fix any TypeScript errors
+- [ ] Test on localhost:3000 (production mode)
+- [ ] Check mobile responsive (iPhone + Android sim)
+
+### Performance
+- [ ] Ensure <3 sec load time
+- [ ] Lazy load images
+- [ ] Cache API responses (15 min revalidation)
+
+### Analytics
+- [ ] Add Vercel Analytics (free tier)
+- [ ] Track: page views, map interactions, article clicks
+
+---
+
+## Technical Decisions
+
+### Data Flow
+```
+User clicks Ukraine marker
+  ↓
+Fetch news: GET /api/news?location=ukraine
+  ↓
+Fetch tweets: GET /api/twitter?keywords=ukraine&accounts=Conflicts,RALee85
+  ↓
+Render side panel with:
+  - Event details (existing)
+  - 📰 News articles (Night 1)
+  - 🐦 Twitter feed (Night 2)
+```
+
+### Caching Strategy
+- News: Cache 15 min (GDELT updates every 15 min)
+- Twitter: Cache 5 min (real-time source)
+- Map tiles: Cache 24h (static)
+
+### Error Handling
+- GDELT down → Show "News unavailable, try again later"
+- Twitter down → Hide Twitter section gracefully
+- Slow network → Show loading skeletons
+
+---
+
+## Cut Features (v1.1 Post-Launch)
+
+These are good ideas but NOT for Thursday launch:
+- ❌ ACLED API integration (complex OAuth, can wait)
+- ❌ User accounts (authentication adds complexity)
+- ❌ Historical timeline (data storage needed)
+- ❌ Email alerts (requires backend + email service)
+- ❌ Advanced clustering (markercluster.js adds weight)
+- ❌ Heatmap view (different visualization paradigm)
+
+Focus: Get core features working, launch clean, iterate fast.

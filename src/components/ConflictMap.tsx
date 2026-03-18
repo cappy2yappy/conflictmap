@@ -1,15 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import { ConflictEvent } from "@/lib/types";
 import { createConflictIcon } from "@/lib/marker-icons";
+import { getConflictsForZoom } from "@/lib/sample-data";
 import "leaflet/dist/leaflet.css";
 
 interface ConflictMapProps {
   conflicts: ConflictEvent[];
   selectedConflict: ConflictEvent | null;
   onSelectConflict: (conflict: ConflictEvent) => void;
+  onZoomChange?: (zoom: number, filteredConflicts: ConflictEvent[]) => void;
 }
 
 function FlyToSelected({ conflict }: { conflict: ConflictEvent | null }) {
@@ -24,16 +26,36 @@ function FlyToSelected({ conflict }: { conflict: ConflictEvent | null }) {
   return null;
 }
 
+function ZoomTracker({ onZoomChange }: { onZoomChange?: (zoom: number, filteredConflicts: ConflictEvent[]) => void }) {
+  const map = useMapEvents({
+    zoomend: () => {
+      const zoom = map.getZoom();
+      const filtered = getConflictsForZoom(zoom);
+      onZoomChange?.(zoom, filtered);
+    },
+  });
+
+  return null;
+}
+
 export default function ConflictMap({
   conflicts,
   selectedConflict,
   onSelectConflict,
+  onZoomChange,
 }: ConflictMapProps) {
   const [mounted, setMounted] = useState(false);
+  const [visibleConflicts, setVisibleConflicts] = useState<ConflictEvent[]>(conflicts);
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Update visible conflicts when zoom changes
+  const handleZoomChange = (zoom: number, filteredConflicts: ConflictEvent[]) => {
+    setVisibleConflicts(filteredConflicts);
+    onZoomChange?.(zoom, filteredConflicts);
+  };
 
   if (!mounted) {
     return (
@@ -57,7 +79,7 @@ export default function ConflictMap({
         attribution='&copy; <a href="https://carto.com/">CARTO</a>'
         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
       />
-      {conflicts.map((conflict) => (
+      {visibleConflicts.map((conflict) => (
         <Marker
           key={conflict.id}
           position={[conflict.lat, conflict.lng]}
@@ -67,6 +89,7 @@ export default function ConflictMap({
           }}
         />
       ))}
+      <ZoomTracker onZoomChange={handleZoomChange} />
       <FlyToSelected conflict={selectedConflict} />
     </MapContainer>
   );
