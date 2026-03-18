@@ -1,15 +1,9 @@
 "use client";
 
-import { ConflictEvent, ConflictType, Severity } from "@/lib/types";
+import { ConflictEvent, ConflictType, Severity, NewsArticle } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { getRelevantAccounts, buildTwitterSearchURL } from "@/lib/twitter-accounts";
-
-interface NewsArticle {
-  title: string;
-  url: string;
-  source: string;
-  publishedAt: string;
-}
+import ArticleModal from "./ArticleModal";
 
 const severityConfig: Record<Severity, { label: string; color: string }> = {
   low: { label: "Low", color: "bg-yellow-500" },
@@ -46,6 +40,7 @@ function ConflictDetail({
   const [news, setNews] = useState<NewsArticle[]>([]);
   const [loadingNews, setLoadingNews] = useState(true);
   const [showAllNews, setShowAllNews] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState<NewsArticle | null>(null);
 
   // Fetch news articles when conflict changes
   useEffect(() => {
@@ -160,12 +155,10 @@ function ConflictDetail({
           <>
             <div className="space-y-3">
               {displayedNews.map((article, idx) => (
-                <a
+                <button
                   key={idx}
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block p-2 rounded hover:bg-gray-800/50 transition-colors group"
+                  onClick={() => setSelectedArticle(article)}
+                  className="block w-full text-left p-2 rounded hover:bg-gray-800/50 transition-colors group"
                 >
                   <h4 className="text-sm text-gray-200 group-hover:text-white line-clamp-2 mb-1">
                     {article.title}
@@ -175,7 +168,7 @@ function ConflictDetail({
                     <span>·</span>
                     <span>{article.publishedAt}</span>
                   </div>
-                </a>
+                </button>
               ))}
             </div>
 
@@ -255,6 +248,14 @@ function ConflictDetail({
           );
         })()}
       </div>
+
+      {/* Article Modal */}
+      {selectedArticle && (
+        <ArticleModal
+          article={selectedArticle}
+          onClose={() => setSelectedArticle(null)}
+        />
+      )}
     </div>
   );
 }
