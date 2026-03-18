@@ -30,27 +30,39 @@ async function fetchGoogleNews(
     const query = `${location} ${keywords.join(" OR ")}`;
     const rssUrl = `https://news.google.com/rss/search?q=${encodeURIComponent(query)}&hl=en-US&gl=US&ceid=US:en`;
     
-    const response = await fetch(rssUrl);
+    console.log(`[Google News] Fetching: ${rssUrl}`);
+    
+    const response = await fetch(rssUrl, {
+      signal: AbortSignal.timeout(10000) // 10 second timeout
+    });
+    
+    if (!response.ok) {
+      console.error(`[Google News] HTTP error: ${response.status}`);
+      return [];
+    }
+    
     const xmlText = await response.text();
+    console.log(`[Google News] XML length: ${xmlText.length} chars`);
     
     // Parse RSS XML (simple extraction)
     const articles: NewsArticle[] = [];
-    const itemRegex = /<item>([\s\S]*?)<\/item>/g;
-    let match;
     
-    while ((match = itemRegex.exec(xmlText)) !== null) {
-      const itemXml = match[1];
+    // Split by <item> tags (more reliable than regex)
+    const items = xmlText.split("<item>");
+    console.log(`[Google News] Found ${items.length - 1} items`);
+    
+    for (let i = 1; i < items.length && articles.length < 10; i++) {
+      const itemXml = items[i].split("</item>")[0];
       
-      const titleMatch = itemXml.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/);
+      const titleMatch = itemXml.match(/<title><!?\[CDATA\[(.*?)\]\]><\/title>/);
       const linkMatch = itemXml.match(/<link>(.*?)<\/link>/);
       const pubDateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/);
-      const descMatch = itemXml.match(/<description><!\[CDATA\[(.*?)\]\]><\/description>/);
       
       if (titleMatch && linkMatch) {
         // Extract source from title (Google News format: "Title - Source")
         const fullTitle = titleMatch[1];
         const titleParts = fullTitle.split(" - ");
-        const title = titleParts[0];
+        const title = titleParts.slice(0, -1).join(" - ") || fullTitle;
         const source = titleParts[titleParts.length - 1] || "Google News";
         
         articles.push({
@@ -58,16 +70,17 @@ async function fetchGoogleNews(
           url: linkMatch[1],
           source,
           publishedAt: pubDateMatch ? new Date(pubDateMatch[1]).toISOString() : new Date().toISOString(),
-          description: descMatch ? descMatch[1].replace(/<[^>]*>/g, "").substring(0, 150) : "",
+          description: "",
         });
+        
+        console.log(`[Google News] Parsed: ${title.substring(0, 50)}... from ${source}`);
       }
-      
-      if (articles.length >= 10) break; // Limit to 10 articles
     }
     
+    console.log(`[Google News] Returning ${articles.length} articles`);
     return articles;
   } catch (error) {
-    console.error("Google News fetch failed:", error);
+    console.error("[Google News] Fetch failed:", error);
     return [];
   }
 }
