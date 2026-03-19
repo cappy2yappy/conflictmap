@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getConflictEvents } from "@/lib/conflict-data";
 
+// Force dynamic rendering to bypass Vercel edge cache
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     const conflicts = await getConflictEvents();
@@ -13,7 +16,7 @@ export async function GET() {
       },
       {
         headers: {
-          "Cache-Control": "s-maxage=3600, stale-while-revalidate=600",
+          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600",
         },
       },
     );
