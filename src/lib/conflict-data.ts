@@ -65,23 +65,31 @@ function sortConflicts(conflicts: ConflictEvent[]): ConflictEvent[] {
   });
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function getConflictEvents(): Promise<ConflictEvent[]> {
   if (eventCache && Date.now() - eventCache.timestamp < CACHE_TTL_MS) {
     return eventCache.events;
   }
 
-  const settledFetches = await Promise.allSettled(
-    EVENT_TYPES.map((eventType) => fetchGDELTEvents(eventType, MAX_ARTICLES_PER_TYPE)),
-  );
-
-  const allArticles = settledFetches.flatMap((result) => {
-    if (result.status === "fulfilled") {
-      return result.value;
+  // Fetch sequentially with delays to avoid rate limiting
+  const allArticles = [];
+  
+  for (const eventType of EVENT_TYPES) {
+    try {
+      const articles = await fetchGDELTEvents(eventType, MAX_ARTICLES_PER_TYPE);
+      allArticles.push(...articles);
+      
+      // Wait 2 seconds between requests to avoid rate limiting
+      if (eventType !== EVENT_TYPES[EVENT_TYPES.length - 1]) {
+        await sleep(2000);
+      }
+    } catch (error) {
+      console.error(`[Conflict Data] Failed to fetch ${eventType}`, error);
     }
-
-    console.error("[Conflict Data] GDELT fetch failed", result.reason);
-    return [];
-  });
+  }
 
   const parsedConflicts = await parseGDELTtoConflicts(allArticles);
   const dedupedConflicts = deduplicateConflicts(parsedConflicts);
