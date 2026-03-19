@@ -22,6 +22,7 @@ interface GDELTDocResponse {
     tone?: number | string;
     sourcecountry?: string;
     locations?: string[] | string;
+    language?: string;
   }>;
 }
 
@@ -119,6 +120,11 @@ export async function fetchGDELTEvents(
 
     const data = (await response.json()) as GDELTDocResponse;
     const articles = (data.articles ?? [])
+      .filter((article) => {
+        // Filter English articles only (GDELT's sourcelang param doesn't always work)
+        const lang = article.language?.toLowerCase() ?? "";
+        return lang === "english" || lang === "en" || lang === "";
+      })
       .map((article) => {
         const url = article.url?.trim() ?? "";
         if (!url.startsWith("http://") && !url.startsWith("https://")) {

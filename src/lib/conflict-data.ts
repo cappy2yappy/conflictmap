@@ -11,7 +11,7 @@ const EVENT_TYPES: ConflictType[] = [
 ];
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
-const MAX_ARTICLES_PER_TYPE = 16;
+const MAX_ARTICLES_PER_TYPE = 40; // Increased since we filter out non-English
 const TARGET_EVENT_COUNT = 30;
 
 let eventCache: { timestamp: number; events: ConflictEvent[] } | null = null;
