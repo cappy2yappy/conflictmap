@@ -1,13 +1,13 @@
 import { fetchGDELTEvents } from "./gdelt-fetcher";
 import { parseGDELTtoConflicts } from "./gdelt-parser";
 import { ConflictEvent, ConflictType } from "./types";
+import { fallbackConflicts } from "./fallback-conflicts";
 
+// Reduced to 3 types to avoid GDELT rate limiting
 const EVENT_TYPES: ConflictType[] = [
   "armed_conflict",
   "protest",
   "civil_unrest",
-  "labor_strike",
-  "terrorism",
 ];
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
@@ -83,9 +83,9 @@ export async function getConflictEvents(): Promise<ConflictEvent[]> {
       const articles = await fetchGDELTEvents(eventType, MAX_ARTICLES_PER_TYPE);
       allArticles.push(...articles);
       
-      // Wait 2 seconds between requests to avoid rate limiting
+      // Wait 5 seconds between requests to avoid GDELT rate limiting
       if (eventType !== EVENT_TYPES[EVENT_TYPES.length - 1]) {
-        await sleep(2000);
+        await sleep(5000);
       }
     } catch (error) {
       console.error(`[Conflict Data] Failed to fetch ${eventType}`, error);
@@ -96,12 +96,17 @@ export async function getConflictEvents(): Promise<ConflictEvent[]> {
   const dedupedConflicts = deduplicateConflicts(parsedConflicts);
   const sortedConflicts = sortConflicts(dedupedConflicts).slice(0, TARGET_EVENT_COUNT);
 
+  // Fallback to curated data if GDELT returned nothing (rate limiting, errors, etc.)
+  const finalConflicts = sortedConflicts.length > 0 ? sortedConflicts : fallbackConflicts;
+
+  console.log(`[Conflict Data] Returning ${finalConflicts.length} conflicts (${sortedConflicts.length > 0 ? 'GDELT' : 'FALLBACK'})`);
+
   eventCache = {
     timestamp: Date.now(),
-    events: sortedConflicts,
+    events: finalConflicts,
   };
 
-  return sortedConflicts;
+  return finalConflicts;
 }
 
 export function getConflictsForZoom(conflicts: ConflictEvent[], zoom: number): ConflictEvent[] {
