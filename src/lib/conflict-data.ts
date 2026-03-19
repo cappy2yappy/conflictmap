@@ -70,7 +70,8 @@ function sleep(ms: number): Promise<void> {
 }
 
 export async function getConflictEvents(): Promise<ConflictEvent[]> {
-  if (eventCache && Date.now() - eventCache.timestamp < CACHE_TTL_MS) {
+  // Skip cache if it's empty (failed fetch) or expired
+  if (eventCache && Date.now() - eventCache.timestamp < CACHE_TTL_MS && eventCache.events.length > 0) {
     return eventCache.events;
   }
 
