@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
 import { ConflictEvent } from "@/lib/types";
 import { createConflictIcon } from "@/lib/marker-icons";
-import { getConflictsForZoom } from "@/lib/sample-data";
+import { getConflictsForZoom } from "@/lib/conflict-data";
 import "leaflet/dist/leaflet.css";
 
 interface ConflictMapProps {
@@ -26,11 +26,17 @@ function FlyToSelected({ conflict }: { conflict: ConflictEvent | null }) {
   return null;
 }
 
-function ZoomTracker({ onZoomChange }: { onZoomChange?: (zoom: number, filteredConflicts: ConflictEvent[]) => void }) {
+function ZoomTracker({ 
+  conflicts, 
+  onZoomChange 
+}: { 
+  conflicts: ConflictEvent[];
+  onZoomChange?: (zoom: number, filteredConflicts: ConflictEvent[]) => void;
+}) {
   const map = useMapEvents({
     zoomend: () => {
       const zoom = map.getZoom();
-      const filtered = getConflictsForZoom(zoom);
+      const filtered = getConflictsForZoom(conflicts, zoom);
       onZoomChange?.(zoom, filtered);
     },
   });
@@ -89,7 +95,7 @@ export default function ConflictMap({
           }}
         />
       ))}
-      <ZoomTracker onZoomChange={handleZoomChange} />
+      <ZoomTracker conflicts={conflicts} onZoomChange={handleZoomChange} />
       <FlyToSelected conflict={selectedConflict} />
     </MapContainer>
   );

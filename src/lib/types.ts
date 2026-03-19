@@ -22,11 +22,12 @@ export interface ConflictEvent {
   severity: Severity;
   casualties?: number;
   source: string;
+  sourceUrl: string;
   country: string;
   region: string;
   zoomLevel: ZoomLevel;
-  parentId?: string; // Link to parent conflict (for sub-events)
-  subEventCount?: number; // Number of child events
+  parentId?: string;
+  subEventCount?: number;
 }
 
 export interface NewsArticle {

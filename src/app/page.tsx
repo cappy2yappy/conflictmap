@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import SidePanel from "@/components/SidePanel";
 import { ConflictEvent } from "@/lib/types";
-import { sampleConflicts } from "@/lib/sample-data";
 
 const ConflictMap = dynamic(() => import("@/components/ConflictMap"), {
   ssr: false,
@@ -16,9 +15,26 @@ const ConflictMap = dynamic(() => import("@/components/ConflictMap"), {
 });
 
 export default function Home() {
+  const [conflicts, setConflicts] = useState<ConflictEvent[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedConflict, setSelectedConflict] =
     useState<ConflictEvent | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
+
+  useEffect(() => {
+    async function loadConflicts() {
+      try {
+        const response = await fetch("/api/conflicts");
+        const data = await response.json();
+        setConflicts(data.conflicts || []);
+      } catch (error) {
+        console.error("Failed to load conflicts:", error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadConflicts();
+  }, []);
 
   const handleSelectConflict = (conflict: ConflictEvent) => {
     setSelectedConflict(conflict);
@@ -29,6 +45,14 @@ export default function Home() {
     setSelectedConflict(null);
   };
 
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-gray-900">
+        <div className="text-gray-400">Loading conflicts...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden">
       {/* Side Panel */}
@@ -38,7 +62,7 @@ export default function Home() {
         } transition-all duration-300 shrink-0 overflow-hidden`}
       >
         <SidePanel
-          conflicts={sampleConflicts}
+          conflicts={conflicts}
           selectedConflict={selectedConflict}
           onSelectConflict={handleSelectConflict}
           onClose={handleClose}
@@ -48,7 +72,7 @@ export default function Home() {
       {/* Map */}
       <div className="flex-1 relative">
         <ConflictMap
-          conflicts={sampleConflicts}
+          conflicts={conflicts}
           selectedConflict={selectedConflict}
           onSelectConflict={handleSelectConflict}
         />
