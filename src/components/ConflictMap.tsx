@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from "react-leaflet";
-import { ConflictEvent } from "@/lib/types";
-import { createConflictIcon } from "@/lib/marker-icons";
+import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { getConflictsForZoom } from "@/lib/conflict-data";
+import { createConflictIcon } from "@/lib/marker-icons";
+import { ConflictEvent } from "@/lib/types";
 import "leaflet/dist/leaflet.css";
 
 interface ConflictMapProps {
@@ -26,18 +26,25 @@ function FlyToSelected({ conflict }: { conflict: ConflictEvent | null }) {
   return null;
 }
 
-function ZoomTracker({ 
-  conflicts, 
-  onZoomChange 
-}: { 
+function ZoomTracker({
+  conflicts,
+  onZoomChange,
+}: {
   conflicts: ConflictEvent[];
   onZoomChange?: (zoom: number, filteredConflicts: ConflictEvent[]) => void;
 }) {
-  const map = useMapEvents({
+  const map = useMap();
+
+  useEffect(() => {
+    const zoom = map.getZoom();
+    onZoomChange?.(zoom, getConflictsForZoom(conflicts, zoom));
+  }, [conflicts, map, onZoomChange]);
+
+  useMapEvents({
     zoomend: () => {
       const zoom = map.getZoom();
-      const filtered = getConflictsForZoom(conflicts, zoom);
-      onZoomChange?.(zoom, filtered);
+      const filteredConflicts = getConflictsForZoom(conflicts, zoom);
+      onZoomChange?.(zoom, filteredConflicts);
     },
   });
 
@@ -57,7 +64,10 @@ export default function ConflictMap({
     setMounted(true);
   }, []);
 
-  // Update visible conflicts when zoom changes
+  useEffect(() => {
+    setVisibleConflicts(conflicts);
+  }, [conflicts]);
+
   const handleZoomChange = (zoom: number, filteredConflicts: ConflictEvent[]) => {
     setVisibleConflicts(filteredConflicts);
     onZoomChange?.(zoom, filteredConflicts);
