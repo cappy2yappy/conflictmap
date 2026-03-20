@@ -1,11 +1,29 @@
 import { BigQuery } from '@google-cloud/bigquery';
 import { ConflictEvent, ConflictType, Severity } from './types';
 
-const bigquery = new BigQuery({
-  projectId: 'conflictmap-490800',
-  keyFilename: process.env.BIGQUERY_CREDENTIALS_PATH || 
-    '/Users/cappy/.openclaw/workspace/projects/conflictmap/bigquery-credentials.json',
-});
+// Initialize BigQuery with credentials
+// For local dev: reads from file
+// For Vercel: reads from BIGQUERY_CREDENTIALS_JSON environment variable
+const getBigQueryClient = () => {
+  if (process.env.BIGQUERY_CREDENTIALS_JSON) {
+    // Vercel/production: use environment variable (base64 encoded)
+    const credentials = JSON.parse(
+      Buffer.from(process.env.BIGQUERY_CREDENTIALS_JSON, 'base64').toString('utf-8')
+    );
+    return new BigQuery({
+      projectId: 'conflictmap-490800',
+      credentials,
+    });
+  } else {
+    // Local dev: use file
+    return new BigQuery({
+      projectId: 'conflictmap-490800',
+      keyFilename: '/Users/cappy/.openclaw/workspace/projects/conflictmap/bigquery-credentials.json',
+    });
+  }
+};
+
+const bigquery = getBigQueryClient();
 
 interface GDELTEvent {
   SQLDATE: number; // BigQuery returns this as an integer (YYYYMMDD)
