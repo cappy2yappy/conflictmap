@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
+import { MapContainer, Marker, Popup, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { getConflictsForZoom } from "@/lib/conflict-data";
 import { createConflictIcon } from "@/lib/marker-icons";
 import { ConflictEvent } from "@/lib/types";
@@ -103,7 +103,41 @@ export default function ConflictMap({
           eventHandlers={{
             click: () => onSelectConflict(conflict),
           }}
-        />
+        >
+          <Popup>
+            <div className="min-w-[250px]">
+              <h3 className="font-bold text-sm mb-1">{conflict.title}</h3>
+              <p className="text-xs text-gray-600 mb-2">{conflict.description}</p>
+              <div className="flex flex-wrap gap-1 mb-2">
+                <span className="px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded">
+                  {conflict.type.replace(/_/g, " ")}
+                </span>
+                <span className={`px-2 py-0.5 text-xs rounded ${
+                  conflict.severity === "critical" ? "bg-red-100 text-red-800" :
+                  conflict.severity === "high" ? "bg-orange-100 text-orange-800" :
+                  conflict.severity === "medium" ? "bg-yellow-100 text-yellow-800" :
+                  "bg-green-100 text-green-800"
+                }`}>
+                  {conflict.severity}
+                </span>
+              </div>
+              <div className="text-xs text-gray-500 mb-2">
+                <div><strong>Location:</strong> {conflict.region}, {conflict.country}</div>
+                <div><strong>Date:</strong> {new Date(conflict.date).toLocaleDateString()}</div>
+              </div>
+              {conflict.sourceUrl && (
+                <a
+                  href={conflict.sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 hover:text-blue-800 underline"
+                >
+                  Read Full Article →
+                </a>
+              )}
+            </div>
+          </Popup>
+        </Marker>
       ))}
       <ZoomTracker conflicts={conflicts} onZoomChange={handleZoomChange} />
       <FlyToSelected conflict={selectedConflict} />
