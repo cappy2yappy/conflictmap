@@ -27,6 +27,7 @@ interface SidePanelProps {
   selectedConflict: ConflictEvent | null;
   onSelectConflict: (conflict: ConflictEvent) => void;
   onClose: () => void;
+  filterPanel?: React.ReactNode;
 }
 
 function ConflictDetail({
@@ -300,6 +301,7 @@ export default function SidePanel({
   selectedConflict,
   onSelectConflict,
   onClose,
+  filterPanel,
 }: SidePanelProps) {
   return (
     <div className="w-full h-full bg-gray-900 border-r border-gray-800 flex flex-col">
@@ -312,6 +314,9 @@ export default function SidePanel({
           Global conflict tracker &middot; {conflicts.length} active events
         </p>
       </div>
+
+      {/* Filters (injected from parent) */}
+      {filterPanel}
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto">

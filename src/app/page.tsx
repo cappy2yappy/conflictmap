@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import dynamic from "next/dynamic";
 import SidePanel from "@/components/SidePanel";
+import FilterPanel, { Filters, DEFAULT_FILTERS } from "@/components/FilterPanel";
 import { ConflictEvent } from "@/lib/types";
 
 const ConflictMap = dynamic(() => import("@/components/ConflictMap"), {
@@ -20,6 +21,23 @@ export default function Home() {
   const [selectedConflict, setSelectedConflict] =
     useState<ConflictEvent | null>(null);
   const [panelOpen, setPanelOpen] = useState(true);
+  const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
+
+  // Derive unique sorted countries from data for the region dropdown
+  const regions = useMemo(() => {
+    const set = new Set(conflicts.map((c) => c.country).filter(Boolean));
+    return Array.from(set).sort();
+  }, [conflicts]);
+
+  // Apply filters client-side
+  const filteredConflicts = useMemo(() => {
+    return conflicts.filter((c) => {
+      if (filters.types.size > 0 && !filters.types.has(c.type)) return false;
+      if (filters.severities.size > 0 && !filters.severities.has(c.severity)) return false;
+      if (filters.region && c.country !== filters.region) return false;
+      return true;
+    });
+  }, [conflicts, filters]);
 
   useEffect(() => {
     async function loadConflicts() {
@@ -62,17 +80,26 @@ export default function Home() {
         } transition-all duration-300 shrink-0 overflow-hidden`}
       >
         <SidePanel
-          conflicts={conflicts}
+          conflicts={filteredConflicts}
           selectedConflict={selectedConflict}
           onSelectConflict={handleSelectConflict}
           onClose={handleClose}
+          filterPanel={
+            <FilterPanel
+              filters={filters}
+              onChange={setFilters}
+              regions={regions}
+              totalCount={conflicts.length}
+              filteredCount={filteredConflicts.length}
+            />
+          }
         />
       </div>
 
       {/* Map */}
       <div className="flex-1 relative">
         <ConflictMap
-          conflicts={conflicts}
+          conflicts={filteredConflicts}
           selectedConflict={selectedConflict}
           onSelectConflict={handleSelectConflict}
         />
