@@ -113,31 +113,98 @@ function extractRegionFromLocation(location: string | null): string {
   return parts[0] || 'Unknown';
 }
 
+// GDELT actor names that are generic roles, occupations, or noise — not useful in titles
+const ACTOR_NAME_BLOCKLIST = new Set([
+  'DETECTIVE', 'TELEVISION', 'RADIO', 'MEDIA', 'JOURNALIST', 'REPORTER',
+  'PRESIDENT', 'MINISTER', 'GOVERNOR', 'MAYOR', 'SENATOR', 'CONGRESSMAN',
+  'CITIZEN', 'CIVILIAN', 'RESIDENT', 'IMMIGRANT', 'REFUGEE', 'MIGRANT',
+  'POLICE', 'OFFICER', 'SOLDIER', 'MILITARY', 'ARMY', 'NAVY',
+  'JUDGE', 'LAWYER', 'ATTORNEY', 'COURT', 'HOSPITAL', 'SCHOOL',
+  'DOCTOR', 'NURSE', 'TEACHER', 'STUDENT', 'WORKER', 'DRIVER',
+  'COMPANY', 'CORPORATION', 'BUSINESS', 'ORGANIZATION', 'GROUP',
+  'MAN', 'WOMAN', 'BOY', 'GIRL', 'CHILD', 'PERSON', 'PEOPLE',
+  'SUSPECT', 'VICTIM', 'WITNESS', 'CRIMINAL', 'PRISONER', 'INMATE',
+  'ACTOR', 'SINGER', 'ATHLETE', 'PLAYER', 'COACH', 'DIRECTOR',
+  'SPOKESMAN', 'SPOKESPERSON', 'OFFICIAL', 'AUTHORITY', 'LEADER',
+  'UNITED', 'STATES', 'GOVERNMENT', 'OPPOSITION', 'REBEL', 'ACTIVIST',
+  'COMMUNITY', 'NETWORK', 'AGENCY', 'DEPARTMENT', 'MINISTRY',
+  'SOURCE', 'CORRESPONDENT', 'EDITOR', 'PRODUCER', 'ANCHOR',
+  'COUNTY', 'CITY', 'STATE', 'REGION', 'AREA', 'DISTRICT',
+]);
+
+/**
+ * Clean a GDELT actor name. Returns null if the name is generic/useless.
+ * Converts ALL-CAPS to Title Case for real names.
+ */
+function cleanActorName(raw: string | null): string | null {
+  if (!raw) return null;
+
+  const trimmed = raw.trim();
+  if (trimmed.length <= 2) return null; // Single letters, initials
+  if (ACTOR_NAME_BLOCKLIST.has(trimmed.toUpperCase())) return null;
+
+  // Filter out names that are all-caps single generic words
+  // (multi-word all-caps names like "HAMAS" or "NATO" are probably real)
+  const words = trimmed.split(/\s+/);
+  if (words.length === 1 && trimmed === trimmed.toUpperCase() && trimmed.length < 6) {
+    return null; // Short all-caps single words are usually noise
+  }
+
+  // Convert ALL CAPS to Title Case (e.g., "HAMAS" stays, "JOHN SMITH" → "John Smith")
+  // Keep acronyms (<=5 chars all caps) as-is
+  if (trimmed === trimmed.toUpperCase()) {
+    if (trimmed.length <= 5 && words.length === 1) {
+      return trimmed; // Likely an acronym: NATO, FARC, Hamas
+    }
+    return words
+      .map(w => w.length <= 3 ? w : w.charAt(0) + w.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  return trimmed;
+}
+
 function generateTitle(event: GDELTEvent): string {
   const type = mapEventCodeToType(event.EventCode);
   const location = extractCountryFromLocation(event.ActionGeo_FullName);
-  
-  const typeLabels: Record<ConflictType, string> = {
+  const city = extractCityFromLocation(event.ActionGeo_FullName);
+
+  const actor1 = cleanActorName(event.Actor1Name);
+  const actor2 = cleanActorName(event.Actor2Name);
+
+  // Location string: prefer "City, Country" when available
+  const locationStr = city && city !== location ? `${city}, ${location}` : location;
+
+  // Build natural-sounding titles based on event type
+  if (actor1 && actor2) {
+    return `${titleForType(type)} Between ${actor1} and ${actor2} in ${locationStr}`;
+  }
+  if (actor1) {
+    return `${titleForType(type)} Involving ${actor1} in ${locationStr}`;
+  }
+
+  // No usable actors — use location-focused template
+  return `${titleForType(type)} Reported in ${locationStr}`;
+}
+
+function titleForType(type: ConflictType): string {
+  const labels: Record<ConflictType, string> = {
     armed_conflict: 'Armed Conflict',
-    protest: 'Protest',
+    protest: 'Protest Activity',
     civil_unrest: 'Civil Unrest',
-    terrorism: 'Terrorist Activity',
+    terrorism: 'Terrorist Incident',
     political_violence: 'Political Violence',
     territorial_dispute: 'Territorial Dispute',
     labor_strike: 'Labor Strike',
   };
-  
-  let title = typeLabels[type] || 'Conflict Event';
-  
-  if (event.Actor1Name && event.Actor2Name) {
-    title += ` between ${event.Actor1Name} and ${event.Actor2Name}`;
-  } else if (event.Actor1Name) {
-    title += ` involving ${event.Actor1Name}`;
-  }
-  
-  title += ` in ${location}`;
-  
-  return title;
+  return labels[type] || 'Conflict Event';
+}
+
+function extractCityFromLocation(location: string | null): string | null {
+  if (!location) return null;
+  const parts = location.split(',').map(s => s.trim());
+  // GDELT format: "City, Region, Country" — first part is city
+  return parts.length >= 3 ? parts[0] : null;
 }
 
 function generateDescription(event: GDELTEvent): string {
