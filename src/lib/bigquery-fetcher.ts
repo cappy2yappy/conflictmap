@@ -156,6 +156,64 @@ function generateDescription(event: GDELTEvent): string {
   return desc;
 }
 
+function mapGDELTRows(rows: GDELTEvent[], idPrefix: string): ConflictEvent[] {
+  return rows
+    .filter((row: GDELTEvent) => row.ActionGeo_Lat && row.ActionGeo_Long)
+    .map((row: GDELTEvent, index: number) => {
+      const type = mapEventCodeToType(row.EventCode);
+      const severity = mapGoldsteinToSeverity(row.GoldsteinScale, row.NumMentions);
+      const country = extractCountryFromLocation(row.ActionGeo_FullName);
+      const region = extractRegionFromLocation(row.ActionGeo_FullName);
+
+      // Determine zoom level based on severity and mentions
+      let zoomLevel: 'strategic' | 'regional' | 'local' = 'regional';
+      if (severity === 'critical' || row.NumMentions > 100) {
+        zoomLevel = 'strategic';
+      } else if (row.NumMentions < 10) {
+        zoomLevel = 'local';
+      }
+
+      // Parse SQLDATE (e.g., 20260319 -> 2026-03-19)
+      const dateStr = row.SQLDATE.toString();
+      const year = parseInt(dateStr.substring(0, 4));
+      const month = parseInt(dateStr.substring(4, 6)) - 1; // Month is 0-indexed
+      const day = parseInt(dateStr.substring(6, 8));
+
+      const event: ConflictEvent = {
+        id: `${idPrefix}-${row.SQLDATE}-${index}`,
+        title: generateTitle(row),
+        description: generateDescription(row),
+        lat: row.ActionGeo_Lat!,
+        lng: row.ActionGeo_Long!,
+        date: new Date(year, month, day).toISOString(),
+        type,
+        severity,
+        source: row.SOURCEURL ? new URL(row.SOURCEURL).hostname.replace('www.', '') : 'GDELT',
+        sourceUrl: row.SOURCEURL || '',
+        country,
+        region,
+        zoomLevel,
+      };
+
+      return event;
+    });
+}
+
+async function runBigQueryQuery(query: string, label: string): Promise<GDELTEvent[]> {
+  console.log(`[BigQuery] Executing ${label} query...`);
+
+  const [job] = await bigquery.createQueryJob({
+    query,
+    location: 'US',
+  });
+
+  console.log(`[BigQuery] ${label} job ${job.id} started`);
+  const [rows] = await job.getQueryResults();
+  console.log(`[BigQuery] ${label}: retrieved ${rows.length} events`);
+
+  return rows;
+}
+
 export async function fetchConflictsFromBigQuery(
   hours: number = 24,
   limit: number = 50
@@ -163,22 +221,15 @@ export async function fetchConflictsFromBigQuery(
   const sqlDate = new Date();
   sqlDate.setHours(sqlDate.getHours() - hours);
   const dateStr = sqlDate.toISOString().split('T')[0].replace(/-/g, '');
-  
-  const query = `
-    SELECT 
-      SQLDATE,
-      Actor1Name,
-      Actor2Name,
-      EventCode,
-      GoldsteinScale,
-      NumMentions,
-      ActionGeo_FullName,
-      ActionGeo_Lat,
-      ActionGeo_Long,
-      SOURCEURL,
-      AvgTone
+
+  // Main global query — strict filters for armed conflicts worldwide
+  const globalQuery = `
+    SELECT
+      SQLDATE, Actor1Name, Actor2Name, EventCode,
+      GoldsteinScale, NumMentions, ActionGeo_FullName,
+      ActionGeo_Lat, ActionGeo_Long, SOURCEURL, AvgTone
     FROM \`gdelt-bq.gdeltv2.events\`
-    WHERE 
+    WHERE
       SQLDATE >= ${dateStr}
       AND GoldsteinScale < -3
       AND ActionGeo_Lat IS NOT NULL
@@ -193,60 +244,56 @@ export async function fetchConflictsFromBigQuery(
     ORDER BY NumMentions DESC, GoldsteinScale ASC
     LIMIT ${limit}
   `;
-  
-  console.log('[BigQuery] Executing query for last', hours, 'hours...');
-  
-  const [job] = await bigquery.createQueryJob({
-    query,
-    location: 'US',
-  });
-  
-  console.log(`[BigQuery] Job ${job.id} started`);
-  
-  const [rows] = await job.getQueryResults();
-  
-  console.log(`[BigQuery] Retrieved ${rows.length} events`);
-  
-  const conflicts: ConflictEvent[] = rows
-    .filter((row: GDELTEvent) => row.ActionGeo_Lat && row.ActionGeo_Long)
-    .map((row: GDELTEvent, index: number) => {
-      const type = mapEventCodeToType(row.EventCode);
-      const severity = mapGoldsteinToSeverity(row.GoldsteinScale, row.NumMentions);
-      const country = extractCountryFromLocation(row.ActionGeo_FullName);
-      const region = extractRegionFromLocation(row.ActionGeo_FullName);
-      
-      // Determine zoom level based on severity and mentions
-      let zoomLevel: 'strategic' | 'regional' | 'local' = 'regional';
-      if (severity === 'critical' || row.NumMentions > 100) {
-        zoomLevel = 'strategic';
-      } else if (row.NumMentions < 10) {
-        zoomLevel = 'local';
-      }
-      
-      // Parse SQLDATE (e.g., 20260319 -> 2026-03-19)
-      const dateStr = row.SQLDATE.toString();
-      const year = parseInt(dateStr.substring(0, 4));
-      const month = parseInt(dateStr.substring(4, 6)) - 1; // Month is 0-indexed
-      const day = parseInt(dateStr.substring(6, 8));
-      
-      const event: ConflictEvent = {
-        id: `bigquery-${row.SQLDATE}-${index}`,
-        title: generateTitle(row),
-        description: generateDescription(row),
-        lat: row.ActionGeo_Lat!,
-        lng: row.ActionGeo_Long!,
-        date: new Date(year, month, day).toISOString(),
-        type,
-        severity,
-        source: row.SOURCEURL ? new URL(row.SOURCEURL).hostname.replace('www.', '') : 'GDELT',
-        sourceUrl: row.SOURCEURL || '',
-        country,
-        region,
-        zoomLevel,
-      };
-      
-      return event;
-    });
-  
-  return conflicts;
+
+  // US-specific query — more lenient: lower Goldstein threshold (-2),
+  // broader event codes (includes all protest sub-codes),
+  // and requires more mentions to filter noise
+  const usQuery = `
+    SELECT
+      SQLDATE, Actor1Name, Actor2Name, EventCode,
+      GoldsteinScale, NumMentions, ActionGeo_FullName,
+      ActionGeo_Lat, ActionGeo_Long, SOURCEURL, AvgTone
+    FROM \`gdelt-bq.gdeltv2.events\`
+    WHERE
+      SQLDATE >= ${dateStr}
+      AND GoldsteinScale < -2
+      AND ActionGeo_Lat IS NOT NULL
+      AND ActionGeo_Long IS NOT NULL
+      AND SOURCEURL IS NOT NULL
+      AND ActionGeo_CountryCode = 'US'
+      AND NumMentions >= 5
+      AND EventCode IN ('140', '141', '142', '143', '144', '145',
+                        '150', '151', '152', '153',
+                        '160', '161', '162',
+                        '170', '171', '172', '173', '174', '175',
+                        '180', '181', '182', '183', '184', '185', '186',
+                        '190', '191', '192', '193', '194', '195', '196',
+                        '200', '201', '202', '203', '204')
+    ORDER BY NumMentions DESC, GoldsteinScale ASC
+    LIMIT 15
+  `;
+
+  // Run both queries in parallel
+  const [globalRows, usRows] = await Promise.all([
+    runBigQueryQuery(globalQuery, 'Global'),
+    runBigQueryQuery(usQuery, 'US').catch((err) => {
+      console.warn('[BigQuery] US query failed, will rely on fallback:', err.message);
+      return [] as GDELTEvent[];
+    }),
+  ]);
+
+  const globalConflicts = mapGDELTRows(globalRows, 'bigquery');
+  const usConflicts = mapGDELTRows(usRows, 'bigquery-us');
+
+  // Merge: deduplicate by checking if a US event's lat/lng already exists in global results
+  const globalCoords = new Set(globalConflicts.map(c => `${c.lat.toFixed(2)},${c.lng.toFixed(2)}`));
+  const uniqueUsConflicts = usConflicts.filter(
+    c => !globalCoords.has(`${c.lat.toFixed(2)},${c.lng.toFixed(2)}`)
+  );
+
+  const merged = [...globalConflicts, ...uniqueUsConflicts];
+
+  console.log(`[BigQuery] Final: ${globalConflicts.length} global + ${uniqueUsConflicts.length} US = ${merged.length} total`);
+
+  return merged;
 }
